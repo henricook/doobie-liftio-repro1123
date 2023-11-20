@@ -27,8 +27,14 @@ object Main extends IOApp.Simple with MockitoSugar {
   // Works, produces all three printlns
   // def run: IO[Unit] = WeakAsync.liftIO[ConnectionIO].use(x => printWithLift(x).transact(dummyRecoveringTransactor))
 
-  // Does not work, produces only "Hi there!"
-  def run: IO[Unit] = WeakAsync.liftIO[ConnectionIO].allocated.map(_._1).map(x => printWithLift(x).transact(dummyRecoveringTransactor))
+  // Also works (now the .flatten is added)
+  def run: IO[Unit] = {
+    (for {
+      (result, cancelHook) <- WeakAsync.liftIO[ConnectionIO].allocated
+    } yield {
+      printWithLift(result).transact(dummyRecoveringTransactor)
+    }).flatten
+  }
 
   // This is your new "main"!
   def printWithLift(liftCIO: LiftIO[ConnectionIO]): ConnectionIO[Unit] = for {
